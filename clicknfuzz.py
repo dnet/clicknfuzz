@@ -26,24 +26,32 @@ class ServerDispatcher:
     def run(self):
         self.bind_socket()
         while 1:
-            st=ServerThread(self.server.accept())
+            st=ServerThread(self.server.accept(),self.target_host,self.target_port)
             st.start()
             self.threads.append(st)
 
 class ServerThread(Thread):
-    def __init__(self,(client,address)):
+    def __init__(self,(client,address),target_host,target_port):
         super(ServerThread,self).__init__()
         self.client=client
         self.address=address
+        self.target_host=target_host
+        self.target_port=target_port
+        self.sock_out=None
 
     def run(self):
+        self.sock_out=socket(AF_INET,SOCK_STREAM)
+        self.sock_out.connect((self.target_host,self.target_port))
         while 1:
             data=self.client.recv(1024)
             if data:
                 print "Got: "+data
+                self.sock_out.send(data)
             else:
                 self.client.close()
+                self.sock_out.close()
                 break
+
 
 if __name__ == "__main__":
     sd=ServerDispatcher("localhost",9999,"localhost",8888)
