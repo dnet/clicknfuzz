@@ -1,0 +1,14 @@
+Click'n'Fuzz
+
+An experimental tool to run protocol fuzzing while using a client-server appliction. 
+
+It works like this:
+
+Client ---- Original TCP data ----> Click'n' Fuzz ---- Original TCP data ----> Server
+       <--- Original TCP answer ---               <--- Original TCP answer --- 
+                                                  ---- Fuzzed TCP data ------>
+                                                  ---- Fuzzed TCP data ------>
+                                                  ---- Fuzzed TCP data ------>
+                                                  ...
+
+Connections are handled by separate threads. Fuzzing methods are added as independent "modules". 
