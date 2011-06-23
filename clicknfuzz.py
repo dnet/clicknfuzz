@@ -1,32 +1,52 @@
-from SocketServer import *
+from threading import *
 from socket import *
 import sys
 
-class MyTCPHandler(BaseRequestHandler):
+class ServerDispatcher:
+    def __init__(self,listen_host,listen_port,target_host,target_port):
+        self.listen_host=listen_host
+        self.listen_port=listen_port
+        self.target_host=target_host
+        self.target_port=target_port
+        
+        self.server=None
+        self.threads=[]
 
-    def setup(self):
-        self.sock_out=socket(AF_INET,SOCK_STREAM)
-        self.sock_out.connect(('localhost',8888))
-    
-    def handle(self):
+    def bind_socket(self):
+        try:
+            self.server=socket(AF_INET,SOCK_STREAM)
+            self.server.bind((self.listen_host,self.listen_port))
+            self.server.listen(5)
+        except error, (value,message):
+            if self.server:
+                self.server.close()
+            print "Could not start server: "+message
+            sys.exit(1)
+
+    def run(self):
+        self.bind_socket()
         while 1:
-            self.data = self.request.recv(1024).strip()
-            if not self.data: break
-            self.sock_out.send(self.data)
+            st=ServerThread(self.server.accept())
+            st.start()
+            self.threads.append(st)
 
-    def finish(self):
-        self.sock_out.close()
+class ServerThread(Thread):
+    def __init__(self,(client,address)):
+        super(ServerThread,self).__init__()
+        self.client=client
+        self.address=address
 
-class ThreadingTCPServer(ThreadingMixIn, TCPServer): pass
+    def run(self):
+        while 1:
+            data=self.client.recv(1024)
+            if data:
+                print "Got: "+data
+            else:
+                self.client.close()
+                break
 
 if __name__ == "__main__":
-    if len(sys.argv)<5:
-        print "Usage: clicknfuzz.py listen_host listen_port target_host target_port"
-    HOST, PORT = sys.argv[1], sys.argv[2]
+    sd=ServerDispatcher("localhost",9999,"localhost",8888)
+    sd.run()
 
-    # Create the server, binding to localhost on port 9999
-    server = ThreadingTCPServer((HOST, PORT), MyTCPHandler)
 
-    # Activate the server; this will keep running until you
-    # interrupt the program with Ctrl-C
-    server.serve_forever()
