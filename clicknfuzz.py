@@ -49,14 +49,24 @@ class ServerThread(Thread):
         while 1:
             data=self.client.recv(1024)
             if data:
-                print "Got: "+data
+                print "Got %d bytes" % len(data)
                 self.sock_out.send(data)
                 answer=self.sock_out.recv(1024)
                 self.client.send(answer)
+                print "Returned %d bytes" % len(answer)
+                fuzz_rounds=0
+                exceptions=0
                 for fuzzer in self.fuzzers:
                     fuzzer.set_data(data)
                     for f in fuzzer:
-                        self.sock_out.send(f)
+                        try:
+                            self.sock_out.send(f)
+                            fuzz_rounds=fuzz_rounds+1
+                        except:
+                            exceptions=exceptions+1
+                            pass
+                print "Sent %d fuzzed packets" % fuzz_rounds
+                print "Exceptions: %d " % exceptions
             else:
                 self.client.close()
                 self.sock_out.close()
