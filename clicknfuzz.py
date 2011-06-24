@@ -73,13 +73,6 @@ class ServerThread(Thread):
                 break
 
 
-def list_to_dict(l):
-    d={}
-    for li in l:
-        d[li[0]]=li[1]
-
-    return d
-
 if __name__ == "__main__":
     if len(sys.argv)<2:
         print "Usage: clicknfuzz.py <configfile>"
@@ -93,7 +86,7 @@ if __name__ == "__main__":
     modules=map(__import__,module_names)
     fuzzers=[]
     for m in modules:
-        f=m.Fuzzer(list_to_dict(config.items(m.__name__)))
+        f=m.Fuzzer(dict(config.items(m.__name__)))
         fuzzers.append(f)
 
     sd=ServerDispatcher(config.get('DEFAULT','listen_host'),config.getint('DEFAULT','listen_port'),
