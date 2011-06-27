@@ -102,7 +102,6 @@ class ServerThread(Thread):
                                 fuzz_rounds=fuzz_rounds+1
                             except:
                                 exceptions=exceptions+1
-                                pass
                     print "Sent %d fuzzed packets" % fuzz_rounds
                     print "Exceptions: %d " % exceptions
             else:
