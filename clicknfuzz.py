@@ -1,5 +1,6 @@
 from threading import *
 from socket import *
+from select import select
 import sys
 import ConfigParser
 
@@ -27,23 +28,59 @@ class ServerDispatcher:
 
     def run(self):
         self.bind_socket()
-        while 1:
-            st=ServerThread(self.server.accept(),self.target_host,self.target_port,fuzzers)
+        ce=Event()
+        se=Event()
+        se.set()
+        ct=ControlThread(ce,se)
+        ct.start()
+        self.threads.append(ct)
+
+        while se.isSet():
+            st=ServerThread(self.server.accept(),self.target_host,self.target_port,fuzzers,ce)
             st.start()
             self.threads.append(st)
 
+        for t in self.threads:
+            t.join(0.5)
+
+class ControlThread(Thread):
+    def __init__(self,fuzz_event,stop_event):
+        super(ControlThread,self).__init__()
+        self.fuzz_event=fuzz_event
+        self.stop_event=stop_event
+
+    def run(self):
+        print "Control Thread started"
+        while self.stop_event.isSet():
+            (rr,wr,er)=select([sys.stdin],[],[],0)
+            for fd in rr:
+                if fd==sys.stdin:
+                    l=sys.stdin.read(1)
+                    if l=="f":
+                        self.fuzz_event.set()
+                        print "Fuzzing enabled"
+                    if l=="s":
+                        self.fuzz_event.clear()
+                        print "Fuzzing disabled"
+                    if l=="e":
+                        self.stop_event.clear()
+                        print "Exiting"
+                                        
+
 class ServerThread(Thread):
-    def __init__(self,(client,address),target_host,target_port,fuzzers):
+    def __init__(self,(client,address),target_host,target_port,fuzzers,event):
         super(ServerThread,self).__init__()
         self.client=client
         self.address=address
         self.target_host=target_host
         self.target_port=target_port
         self.fuzzers=fuzzers
+        self.event=event
         self.sock_out=None
-
+        
 
     def run(self):
+        print "Thread started"
         self.sock_out=socket(AF_INET,SOCK_STREAM)
         self.sock_out.connect((self.target_host,self.target_port))
         while 1:
@@ -54,24 +91,24 @@ class ServerThread(Thread):
                 answer=self.sock_out.recv(1024)
                 self.client.send(answer)
                 print "Returned %d bytes" % len(answer)
-                fuzz_rounds=0
-                exceptions=0
-                for fuzzer in self.fuzzers:
-                    fuzzer.set_data(data)
-                    for f in fuzzer:
-                        try:
-                            self.sock_out.send(f)
-                            fuzz_rounds=fuzz_rounds+1
-                        except:
-                            exceptions=exceptions+1
-                            pass
-                print "Sent %d fuzzed packets" % fuzz_rounds
-                print "Exceptions: %d " % exceptions
+                if self.event.isSet():
+                    fuzz_rounds=0
+                    exceptions=0
+                    for fuzzer in self.fuzzers:
+                        fuzzer.set_data(data)
+                        for f in fuzzer:
+                            try:
+                                self.sock_out.send(f)
+                                fuzz_rounds=fuzz_rounds+1
+                            except:
+                                exceptions=exceptions+1
+                                pass
+                    print "Sent %d fuzzed packets" % fuzz_rounds
+                    print "Exceptions: %d " % exceptions
             else:
                 self.client.close()
                 self.sock_out.close()
                 break
-
 
 if __name__ == "__main__":
     if len(sys.argv)<2:
