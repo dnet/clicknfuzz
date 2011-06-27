@@ -59,10 +59,10 @@ class ControlThread(Thread):
                     if l=="f":
                         self.fuzz_event.set()
                         print "Fuzzing enabled"
-                    if l=="s":
+                    elif l=="s":
                         self.fuzz_event.clear()
                         print "Fuzzing disabled"
-                    if l=="e":
+                    elif l=="e":
                         self.stop_event.clear()
                         print "Exiting"
                                         
