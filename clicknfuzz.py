@@ -54,7 +54,7 @@ class ControlThread(Thread):
         while self.stop_event.isSet():
             (rr,wr,er)=select([sys.stdin],[],[],0)
             for fd in rr:
-                if fd==sys.stdin:
+                if fd is sys.stdin:
                     l=sys.stdin.read(1)
                     if l=="f":
                         self.fuzz_event.set()
