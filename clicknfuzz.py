@@ -54,15 +54,15 @@ class ControlThread(Thread):
         while self.stop_event.isSet():
             (rr,wr,er)=select([sys.stdin],[],[],0)
             for fd in rr:
-                if fd==sys.stdin:
+                if fd is sys.stdin:
                     l=sys.stdin.read(1)
                     if l=="f":
                         self.fuzz_event.set()
                         print "Fuzzing enabled"
-                    if l=="s":
+                    elif l=="s":
                         self.fuzz_event.clear()
                         print "Fuzzing disabled"
-                    if l=="e":
+                    elif l=="e":
                         self.stop_event.clear()
                         print "Exiting"
                                         
@@ -102,7 +102,6 @@ class ServerThread(Thread):
                                 fuzz_rounds=fuzz_rounds+1
                             except:
                                 exceptions=exceptions+1
-                                pass
                     print "Sent %d fuzzed packets" % fuzz_rounds
                     print "Exceptions: %d " % exceptions
             else:
